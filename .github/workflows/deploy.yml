@@ -54,5 +54,18 @@ jobs:
       - name: Mudanças a publicar
         run: npm run status
 
+      # Documentação do CLI: `push` envia só o que mudou, em lote atômico, e depois atualiza o registro
+      # local; `fetch` atualiza esse registro com o estado real da nuvem. Se o `push` terminar com
+      # erro, `fetch` + `push` de novo reconcilia (não envia nada se a nuvem já está igual). Se o
+      # segundo `push` também falhar, o deploy falha.
       - name: Publicar módulos e Mini App
-        run: npm run deploy
+        run: |
+          if ! npm run deploy; then
+            echo "::warning::push terminou com erro; sincronizando o estado (fetch) e repetindo o push"
+            npm run fetch
+            npm run status
+            npm run deploy
+          fi
+
+      - name: Estado do webhook
+        run: npm run webhook

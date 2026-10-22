@@ -10,6 +10,8 @@
   "scripts": {
     "deploy": "tgcloud push",
     "status": "tgcloud status",
-    "fetch": "tgcloud fetch"
+    "fetch": "tgcloud fetch",
+    "run": "tgcloud run",
+    "webhook": "tgcloud webhook"
   }
 }
