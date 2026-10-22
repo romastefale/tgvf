@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Mini Apps > Initializing Mini Apps: o script vai no <head>, antes de qualquer outro script -->
+<script src="https://telegram.org/js/telegram-web-app.js?64"></script>
+<title>Verificador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Cores vêm do tema do Telegram (Mini Apps > ThemeParams, variáveis --tg-theme-*). */
+  :root {
+    --bg: var(--tg-theme-bg-color, #ffffff);
+    --fg: var(--tg-theme-text-color, #111111);
+    --hint: var(--tg-theme-hint-color, #8a8a8e);
+    --btn: var(--tg-theme-button-color, #2481cc);
+    --btn-fg: var(--tg-theme-button-text-color, #ffffff);
+    --bad: var(--tg-theme-destructive-text-color, #d33a3a);
+    --glass: rgba(127, 127, 127, 0.12);
+    --line: rgba(127, 127, 127, 0.28);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    color: var(--fg);
+    font: 14px/1.5 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .card {
+    width: 100%;
+    max-width: 420px;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+  }
+  h1 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+  p { margin: 0 0 20px; color: var(--hint); font-size: 12px; }
+  .row { display: flex; gap: 8px; }
+  button {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--fg);
+    font: inherit;
+    font-weight: 600;
+  }
+  button.primary { background: var(--btn); color: var(--btn-fg); border-color: transparent; }
+  button:disabled { opacity: 0.5; }
+  ul { list-style: none; margin: 16px 0 0; padding: 0; }
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+  }
+  .ok { color: #2e9d5b; }
+  .bad { color: var(--bad); }
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>Verificador</h1>
+  <p>Perfil e bots do dono.</p>
+  <div class="row">
+    <button class="primary" id="verify">Verificar</button>
+    <button id="unverify">Remover</button>
+  </div>
+  <ul id="out"></ul>
+</main>
+<script>
+  var tg = Telegram.WebApp;
+  tg.ready();
+  tg.expand();
+
+  var out = document.getElementById('out');
+  var buttons = document.querySelectorAll('button');
+
+  function busy(on) {
+    buttons.forEach(function (b) { b.disabled = on; });
+  }
+
+  // Mostra as linhas { label, ok, detail } devolvidas pelo endpoint.
+  function show(rows) {
+    out.textContent = '';
+    rows.forEach(function (r) {
+      var li = document.createElement('li');
+      var name = document.createElement('span');
+      name.textContent = r.label;
+      var state = document.createElement('span');
+      state.className = r.ok ? 'ok' : 'bad';
+      state.textContent = r.ok ? 'OK' : r.detail;
+      li.append(name, state);
+      out.append(li);
+    });
+  }
+
+  // Mini Apps > Serverless: call(name[, input][, callback]); callback(error, resultado).
+  function run(name) {
+    busy(true);
+    tg.Serverless.call(name, function (error, rows) {
+      busy(false);
+      if (error) {
+        show([{ label: 'erro', ok: false, detail: error.message }]);
+        return;
+      }
+      show(rows);
+    });
+  }
+
+  document.getElementById('verify').addEventListener('click', function () {
+    run('verify');
+  });
+  document.getElementById('unverify').addEventListener('click', function () {
+    tg.showConfirm('Remover as verificações?', function (ok) {
+      if (ok) run('unverify');
+    });
+  });
+</script>
+</body>
+</html>

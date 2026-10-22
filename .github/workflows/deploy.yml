@@ -1,0 +1,58 @@
+name: Deploy (Telegram Serverless)
+
+# Cada push na main que altera o bot publica os módulos e o Mini App (`tgcloud push`).
+# O token do Serverless (BotFather → bot → Serverless → CLI Access → Access token,
+# formato app<id>:<secret>) está no secret KEY1 e é entregue à CLI como TGCLOUD_TOKEN,
+# que é a variável documentada para CI. NÃO é o token da Bot API.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tgcloud/**"
+      - "app/**"
+      - "tgcloud.jsonc"
+      - "package.json"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: tgcloud-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TGCLOUD_TOKEN: ${{ secrets.KEY1 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verificar secret
+        run: |
+          if [ -z "$TGCLOUD_TOKEN" ]; then
+            echo "::error::Defina o secret KEY1 (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+
+      # CLI oficial @tgcloud/cli em versão fixa, instalada localmente.
+      - run: npm install --no-audit --no-fund
+
+      # O estado local (.tgcloud/) não existe no runner; `fetch` baixa o estado da nuvem
+      # para o `push` saber em qual revisão está se baseando.
+      - name: Sincronizar estado da nuvem
+        run: npm run fetch
+
+      - name: Mudanças a publicar
+        run: npm run status
+
+      - name: Publicar módulos e Mini App
+        run: npm run deploy
