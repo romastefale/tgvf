@@ -6,7 +6,9 @@ the largest surface, so it comes first; `api`, `fetch`, and `console` are at the
 end.
 
 > Orientation and project rules live in [../AGENTS.md](../AGENTS.md). This file is
-> the API reference.
+> a fast lookup — scaffolded by `tgcloud init`, not the official text. The
+> literal source is [official/telegram-serverless.md](official/telegram-serverless.md);
+> if the two disagree, that one wins.
 
 ## `sdk` at a glance
 

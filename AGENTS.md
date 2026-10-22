@@ -2,8 +2,10 @@
 
 Orientation for AI coding assistants (and humans) working in this project.
 This file is auto-loaded by Claude Code, Cursor, and similar tools — keep it short
-and true. For the full SDK reference (db, Bot API, fetch), see
-[docs/tgcloud-sdk.md](docs/tgcloud-sdk.md).
+and true. [docs/tgcloud-sdk.md](docs/tgcloud-sdk.md) is a quick SDK reference
+(db, Bot API, fetch) — handy, but it's a secondhand summary, not the official
+text. For that, see [docs/official/](docs/official/) and the Ground rules
+below; if the two ever disagree, docs/official/ wins.
 
 ## What this project is
 
@@ -15,6 +17,40 @@ with the bot's cloud environment — think `wrangler`/`vercel` + `drizzle-kit`.
 There is no server to run locally and no `node_modules` to import from at runtime:
 the only things available inside a module are the platform SDK and other modules
 in this project.
+
+## Ground rules
+
+Code already in this repo is not itself a source of truth — don't base a fix
+on what old code (yours from an earlier session included) assumes. Check the
+real thing instead:
+
+- Telegram's own platforms this project runs on and talks to — the
+  Serverless runtime, the Bot API, Mini Apps: the literal official pages,
+  kept unmodified in [docs/official/](docs/official/) —
+  [telegram-serverless.md](docs/official/telegram-serverless.md),
+  [telegram-bot-api.md](docs/official/telegram-bot-api.md),
+  [telegram-mini-apps.md](docs/official/telegram-mini-apps.md),
+  [telegram-mini-apps-mtproto.md](docs/official/telegram-mini-apps-mtproto.md).
+  Each carries its source URL and extraction date at the top; when behavior
+  seems to have moved on from what's there, treat the live
+  `core.telegram.org` page as current, not this snapshot or your memory.
+- Any other third-party API this project calls (Last.fm, …): its current
+  official docs.
+- This platform's own runtime in practice (V8 isolate globals, what a
+  `tgcloud` command does, `sdk` behavior): test it with
+  `npx tgcloud run <module> '{}' --ctx '...'` against the real cloud
+  environment — not a local/mocked stand-in for it.
+  [docs/tgcloud-sdk.md](docs/tgcloud-sdk.md) is a fast lookup for this, but
+  it's a secondhand summary (scaffolded by `tgcloud init`), not the official
+  text — fall back to [docs/official/telegram-serverless.md](docs/official/telegram-serverless.md)
+  or a real test when it's unclear or looks stale, not to this file's word
+  alone.
+- Whether a fix works at all: a real run against the above, not a reading of
+  your own code. `node --check` catches typos; it is not a test.
+
+When the bug turns out to be this project's own, say so and fix that —
+don't default to blaming the external service, and don't widen error
+handling just to make the symptom quieter.
 
 ## Layout
 
