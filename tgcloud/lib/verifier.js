@@ -3,13 +3,9 @@
 //  - `api.<método>(params)` e BotApiError (.code, .description, .parameters): Serverless > The Bot API
 //  - EndpointError(description, parameters?): Serverless > Endpoints
 //  - verifyUser / verifyChat / removeUserVerification / removeChatVerification: Bot API
-//  - `console` disponível nos módulos: Serverless > Logging
 //  - módulos em lib/ importados por caminho relativo com .js: Serverless > The module system
 import { api, BotApiError, EndpointError } from 'sdk';
-
-// Preencha antes do deploy.
-export const OWNER_ID = 0;   // seu user_id numérico (Integer)
-export const MY_BOTS = [];   // @username dos seus bots, ex.: ['@meubot1', '@meubot2', '@meubot3']
+import { OWNER_ID, MY_BOTS } from './config.js';
 
 // Devolve o motivo da configuração incompleta, ou null se está tudo preenchido.
 export function configProblem() {

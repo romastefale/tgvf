@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - "tgcloud/**"
+      - "scripts/**"
       - "app/**"
       - "tgcloud.jsonc"
       - "package.json"
@@ -29,6 +30,7 @@ jobs:
     timeout-minutes: 10
     env:
       TGCLOUD_TOKEN: ${{ secrets.KEY1 }}
+      OWNER: ${{ vars.OWNER || secrets.OWNER }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,6 +52,10 @@ jobs:
       # para o `push` saber em qual revisão está se baseando.
       - name: Sincronizar estado da nuvem
         run: npm run fetch
+
+      # O runtime não lê variáveis de ambiente: o dono é gravado em config.js antes do push.
+      - name: Gravar configuração (OWNER)
+        run: node scripts/apply-config.mjs
 
       - name: Mudanças a publicar
         run: npm run status
