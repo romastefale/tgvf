@@ -33,19 +33,20 @@ export function assertOwner(ctx) {
   if (!isOwner(ctx.initData?.user?.id)) throw new EndpointError('Acesso negado', { code: 'FORBIDDEN' });
 }
 
-// Executa uma chamada da Bot API e devolve { label, ok, detail? }. Nunca lança:
-// uma falha em um item não impede os demais.
+// Executa uma chamada da Bot API e devolve { label, ok, detail? }. Falha esperada da
+// Bot API (BotApiError) vira linha de resultado e não impede os demais itens; qualquer
+// outro erro é relançado.
 async function step(label, call) {
   try {
     await call();
     return { label, ok: true };
   } catch (e) {
+    // Serverless > The SDK > The Bot API: captura o BotApiError esperado e relança o resto.
     if (e instanceof BotApiError) {
       const wait = e.parameters?.retry_after;
       return { label, ok: false, detail: `${e.code} ${e.description}${wait ? ` (tente em ${wait}s)` : ''}` };
     }
-    console.error(`${label}:`, e);
-    return { label, ok: false, detail: 'erro interno' };
+    throw e;
   }
 }
 

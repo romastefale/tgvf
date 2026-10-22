@@ -87,8 +87,6 @@
   var tg = window.Telegram && window.Telegram.WebApp;
   var out = document.getElementById('out');
   var buttons = document.querySelectorAll('button');
-  var TIMEOUT_MS = 30000;
-  var current = 0; // identifica a chamada em andamento; respostas de chamadas antigas são ignoradas
 
   function busy(on) {
     buttons.forEach(function (b) { b.disabled = on; });
@@ -121,20 +119,10 @@
 
   // Mini Apps > Serverless: call(name[, input][, callback]); callback(error, resultado).
   function run(name) {
-    var id = ++current;
     busy(true);
-    var timer = setTimeout(function () {
-      if (id !== current) return;
-      current++; // ignora uma resposta que chegue depois
-      busy(false);
-      fail('Sem resposta. Tente de novo.');
-    }, TIMEOUT_MS);
     tg.Serverless.call(name, function (error, rows) {
-      if (id !== current) return;
-      clearTimeout(timer);
       busy(false);
       if (error) return fail(describe(error));
-      if (!Array.isArray(rows)) return fail('Resposta inesperada.');
       show(rows);
     });
   }
