@@ -57,6 +57,7 @@
     font-weight: 600;
   }
   button.primary { background: var(--btn); color: var(--btn-fg); border-color: transparent; }
+  button:focus-visible { outline: 2px solid var(--btn); outline-offset: 2px; }
   button:disabled { opacity: 0.5; }
   ul { list-style: none; margin: 16px 0 0; padding: 0; }
   li {
@@ -67,6 +68,7 @@
     border-top: 1px solid var(--line);
     font-size: 12px;
   }
+  li span:last-child { text-align: right; overflow-wrap: anywhere; }
   .ok { color: #2e9d5b; }
   .bad { color: var(--bad); }
 </style>
@@ -79,15 +81,14 @@
     <button class="primary" id="verify">Verificar</button>
     <button id="unverify">Remover</button>
   </div>
-  <ul id="out"></ul>
+  <ul id="out" aria-live="polite"></ul>
 </main>
 <script>
-  var tg = Telegram.WebApp;
-  tg.ready();
-  tg.expand();
-
+  var tg = window.Telegram && window.Telegram.WebApp;
   var out = document.getElementById('out');
   var buttons = document.querySelectorAll('button');
+  var TIMEOUT_MS = 30000;
+  var current = 0; // identifica a chamada em andamento; respostas de chamadas antigas são ignoradas
 
   function busy(on) {
     buttons.forEach(function (b) { b.disabled = on; });
@@ -108,27 +109,52 @@
     });
   }
 
+  function fail(text) {
+    show([{ label: 'erro', ok: false, detail: text }]);
+  }
+
+  // error.type "UNAUTHORIZED": init data ausente ou inválido (Mini Apps > Serverless).
+  function describe(error) {
+    if (error.type === 'UNAUTHORIZED') return 'Abra este app pelo bot, dentro do Telegram.';
+    return error.message || 'erro desconhecido';
+  }
+
   // Mini Apps > Serverless: call(name[, input][, callback]); callback(error, resultado).
   function run(name) {
+    var id = ++current;
     busy(true);
-    tg.Serverless.call(name, function (error, rows) {
+    var timer = setTimeout(function () {
+      if (id !== current) return;
+      current++; // ignora uma resposta que chegue depois
       busy(false);
-      if (error) {
-        show([{ label: 'erro', ok: false, detail: error.message }]);
-        return;
-      }
+      fail('Sem resposta. Tente de novo.');
+    }, TIMEOUT_MS);
+    tg.Serverless.call(name, function (error, rows) {
+      if (id !== current) return;
+      clearTimeout(timer);
+      busy(false);
+      if (error) return fail(describe(error));
+      if (!Array.isArray(rows)) return fail('Resposta inesperada.');
       show(rows);
     });
   }
 
-  document.getElementById('verify').addEventListener('click', function () {
-    run('verify');
-  });
-  document.getElementById('unverify').addEventListener('click', function () {
-    tg.showConfirm('Remover as verificações?', function (ok) {
-      if (ok) run('unverify');
+  if (!tg || !tg.Serverless) {
+    // Fora do Telegram, ou em um cliente antigo que ainda não tem o objeto Serverless.
+    busy(true);
+    fail(tg ? 'Atualize o Telegram para usar este app.' : 'Abra este app dentro do Telegram.');
+  } else {
+    tg.ready();
+    tg.expand();
+    document.getElementById('verify').addEventListener('click', function () {
+      run('verify');
     });
-  });
+    document.getElementById('unverify').addEventListener('click', function () {
+      tg.showConfirm('Remover as verificações?', function (ok) {
+        if (ok) run('unverify');
+      });
+    });
+  }
 </script>
 </body>
 </html>

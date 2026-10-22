@@ -1,29 +1,60 @@
 // Lógica compartilhada pelo handler do bot e pelos endpoints do Mini App.
 // Fontes oficiais:
-//  - `api.<método>(params)` e BotApiError (.code, .description): Serverless > The Bot API
+//  - `api.<método>(params)` e BotApiError (.code, .description, .parameters): Serverless > The Bot API
+//  - EndpointError(description, parameters?): Serverless > Endpoints
 //  - verifyUser / verifyChat / removeUserVerification / removeChatVerification: Bot API
+//  - `console` disponível nos módulos: Serverless > Logging
 //  - módulos em lib/ importados por caminho relativo com .js: Serverless > The module system
-import { api, BotApiError } from 'sdk';
+import { api, BotApiError, EndpointError } from 'sdk';
 
-// Preencha antes do push.
-export const OWNER_ID = 0;                                   // seu user_id numérico (Integer)
-export const MY_BOTS = ['@bot_um', '@bot_dois', '@bot_tres']; // @username dos seus 3 bots
+// Preencha antes do deploy.
+export const OWNER_ID = 0;   // seu user_id numérico (Integer)
+export const MY_BOTS = [];   // @username dos seus bots, ex.: ['@meubot1', '@meubot2', '@meubot3']
 
-// Executa uma chamada da Bot API e devolve { label, ok, detail? }.
+// Devolve o motivo da configuração incompleta, ou null se está tudo preenchido.
+export function configProblem() {
+  if (!Number.isInteger(OWNER_ID) || OWNER_ID <= 0) return 'OWNER_ID não preenchido';
+  if (!Array.isArray(MY_BOTS) || MY_BOTS.length === 0) return 'MY_BOTS vazio';
+  if (!MY_BOTS.every((b) => typeof b === 'string' && /^@\S+$/.test(b))) {
+    return 'MY_BOTS deve conter @usernames';
+  }
+  return null;
+}
+
+export function isOwner(userId) {
+  return Number.isInteger(OWNER_ID) && OWNER_ID > 0 && userId === OWNER_ID;
+}
+
+// Usada pelos endpoints. O init data já vem verificado pela plataforma (ctx.initData),
+// mas o campo `user` é opcional, então é checado aqui.
+export function assertOwner(ctx) {
+  const problem = configProblem();
+  if (problem) throw new EndpointError('Configuração incompleta', { code: 'NOT_CONFIGURED', problem });
+  if (!isOwner(ctx.initData?.user?.id)) throw new EndpointError('Acesso negado', { code: 'FORBIDDEN' });
+}
+
+// Executa uma chamada da Bot API e devolve { label, ok, detail? }. Nunca lança:
+// uma falha em um item não impede os demais.
 async function step(label, call) {
   try {
     await call();
     return { label, ok: true };
   } catch (e) {
-    if (e instanceof BotApiError) return { label, ok: false, detail: `${e.code} ${e.description}` };
-    throw e;
+    if (e instanceof BotApiError) {
+      const wait = e.parameters?.retry_after;
+      return { label, ok: false, detail: `${e.code} ${e.description}${wait ? ` (tente em ${wait}s)` : ''}` };
+    }
+    console.error(`${label}:`, e);
+    return { label, ok: false, detail: 'erro interno' };
   }
 }
+
+const targets = () => [...new Set(MY_BOTS)];
 
 // custom_description é omitido: o texto oficial exige vazio se a organização não tiver permissão.
 export async function verifyAll() {
   const rows = [await step('perfil', () => api.verifyUser({ user_id: OWNER_ID }))];
-  for (const bot of MY_BOTS) {
+  for (const bot of targets()) {
     rows.push(await step(bot, () => api.verifyChat({ chat_id: bot })));
   }
   return rows;
@@ -31,7 +62,7 @@ export async function verifyAll() {
 
 export async function removeAll() {
   const rows = [await step('perfil', () => api.removeUserVerification({ user_id: OWNER_ID }))];
-  for (const bot of MY_BOTS) {
+  for (const bot of targets()) {
     rows.push(await step(bot, () => api.removeChatVerification({ chat_id: bot })));
   }
   return rows;
