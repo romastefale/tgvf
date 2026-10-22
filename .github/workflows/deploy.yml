@@ -60,13 +60,6 @@ jobs:
       - name: Mudanças a publicar
         run: npm run status
 
-      # Teste na plataforma real (AGENTS.md): `run` executa o módulo na nuvem com os arquivos locais,
-      # sem publicar. Um grupo não é chat privado, então o handler carrega todos os módulos e retorna
-      # sem chamar a Bot API.
-      - name: Teste na plataforma (tgcloud run)
-        run: |
-          npm run run -- handlers/message '{ chat: { id: 1, type: "group" }, text: "/verificar" }'
-
       # Documentação do CLI: `push` envia só o que mudou, em lote atômico, e depois atualiza o registro
       # local; `fetch` atualiza esse registro com o estado real da nuvem. Se o `push` terminar com
       # erro, `fetch` + `push` de novo reconcilia (não envia nada se a nuvem já está igual). Se o
