@@ -1,34 +1,32 @@
-// Handler de mensagens do bot verificador (Telegram Serverless).
-//  - estrutura do handler (export default recebe a Message): Serverless > Handlers
-//  - message.from (User, opcional), message.chat.type ("private", ...) e message.text: Bot API > Message e Chat
+// handlers/message.js recebe a Message (update.message). Bot API: Message, Chat, User.
 import { api } from 'sdk';
-import { isOwner, configProblem, verifyAll, removeAll } from '../lib/verifier.js';
+import { configProblem, isOwner, verifyAll, removeAll } from '../lib/verification.js';
 
 const HELP = 'Comandos:\n/verificar - verifica o seu perfil e os seus bots\n/remover - remove as verificações';
 
-const line = (r) => (r.ok ? `OK | ${r.label}` : `FALHOU | ${r.label}: ${r.detail}`);
+const format = ({ ok, label, detail }) => (ok ? `OK | ${label}` : `FALHOU | ${label}: ${detail}`);
 
 export default async function (message) {
-  // Só o dono, e só em chat privado. Qualquer outra pessoa é ignorada em silêncio.
-  if (message.chat?.type !== 'private' || !isOwner(message.from?.id)) return;
+  // Só o dono, em chat privado; os demais updates são ignorados.
+  if (message.chat.type !== 'private' || !isOwner(message.from?.id)) return;
 
-  // Primeira palavra, sem o sufixo @bot que o Telegram pode acrescentar.
-  const command = (message.text ?? '').trim().split(/\s+/)[0].split('@')[0].toLowerCase();
+  // Comando = primeira palavra, sem o @bot que o Telegram acrescenta em grupos.
+  const [command] = (message.text ?? '').trim().toLowerCase().split(/\s+/)[0].split('@');
 
-  let reply;
-  if (command === '/verificar' || command === '/remover') {
+  let text;
+  if (command === '/start' || command === '/ajuda') {
+    text = HELP;
+  } else if (command === '/verificar' || command === '/remover') {
     const problem = configProblem();
     if (problem) {
-      reply = `Configuração incompleta: ${problem}.`;
+      text = `Configuração incompleta: ${problem}.`;
     } else {
-      const rows = command === '/verificar' ? await verifyAll() : await removeAll();
-      reply = rows.map(line).join('\n');
+      const results = command === '/verificar' ? await verifyAll() : await removeAll();
+      text = results.map(format).join('\n');
     }
-  } else if (command === '/start' || command === '/ajuda') {
-    reply = HELP;
   } else {
     return;
   }
 
-  await api.sendMessage({ chat_id: message.chat.id, text: reply });
+  await api.sendMessage({ chat_id: message.chat.id, text });
 }

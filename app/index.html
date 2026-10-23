@@ -1,148 +1,62 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- Mini Apps > Initializing Mini Apps: o script vai no <head>, antes de qualquer outro script -->
-<script src="https://telegram.org/js/telegram-web-app.js?64"></script>
-<title>Verificador</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  /* Cores vêm do tema do Telegram (Mini Apps > ThemeParams, variáveis --tg-theme-*). */
-  :root {
-    --bg: var(--tg-theme-bg-color, #ffffff);
-    --fg: var(--tg-theme-text-color, #111111);
-    --hint: var(--tg-theme-hint-color, #8a8a8e);
-    --btn: var(--tg-theme-button-color, #2481cc);
-    --btn-fg: var(--tg-theme-button-text-color, #ffffff);
-    --bad: var(--tg-theme-destructive-text-color, #d33a3a);
-    --glass: rgba(127, 127, 127, 0.12);
-    --line: rgba(127, 127, 127, 0.28);
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
-    background: var(--bg);
-    color: var(--fg);
-    font: 14px/1.5 'JetBrains Mono', ui-monospace, monospace;
-  }
-  .card {
-    width: 100%;
-    max-width: 420px;
-    padding: 20px;
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    background: var(--glass);
-    -webkit-backdrop-filter: blur(18px);
-    backdrop-filter: blur(18px);
-  }
-  h1 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
-  p { margin: 0 0 20px; color: var(--hint); font-size: 12px; }
-  .row { display: flex; gap: 8px; }
-  button {
-    flex: 1;
-    padding: 12px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--fg);
-    font: inherit;
-    font-weight: 600;
-  }
-  button.primary { background: var(--btn); color: var(--btn-fg); border-color: transparent; }
-  button:focus-visible { outline: 2px solid var(--btn); outline-offset: 2px; }
-  button:disabled { opacity: 0.5; }
-  ul { list-style: none; margin: 16px 0 0; padding: 0; }
-  li {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 8px 0;
-    border-top: 1px solid var(--line);
-    font-size: 12px;
-  }
-  li span:last-child { text-align: right; overflow-wrap: anywhere; }
-  .ok { color: #2e9d5b; }
-  .bad { color: var(--bad); }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Verificador</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body { margin: 0; padding: 16px; font-family: system-ui, sans-serif;
+           background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); }
+    h1 { font-size: 1.25rem; margin: 0 0 16px; }
+    button { width: 100%; padding: 12px; margin-bottom: 8px; border: 0; border-radius: 8px; font-size: 1rem;
+             background: var(--tg-theme-button-color, #2481cc); color: var(--tg-theme-button-text-color, #fff); }
+    button:disabled { opacity: .5; }
+    ul { list-style: none; padding: 0; margin: 16px 0 0; }
+    li { padding: 8px 0; border-bottom: 1px solid var(--tg-theme-hint-color, #ccc); word-break: break-word; }
+    .error { color: var(--tg-theme-destructive-text-color, #d33); }
+  </style>
 </head>
 <body>
-<main class="card">
   <h1>Verificador</h1>
-  <p>Perfil e bots do dono.</p>
-  <div class="row">
-    <button class="primary" id="verify">Verificar</button>
-    <button id="unverify">Remover</button>
-  </div>
-  <ul id="out" aria-live="polite"></ul>
-</main>
-<script>
-  var tg = window.Telegram && window.Telegram.WebApp;
-  var out = document.getElementById('out');
-  var buttons = document.querySelectorAll('button');
+  <button id="verify">Verificar perfil e bots</button>
+  <button id="unverify">Remover verificações</button>
+  <ul id="out"></ul>
 
-  function busy(on) {
-    buttons.forEach(function (b) { b.disabled = on; });
-  }
-
-  // Mostra as linhas { label, ok, detail } devolvidas pelo endpoint.
-  function show(rows) {
-    out.textContent = '';
-    rows.forEach(function (r) {
-      var li = document.createElement('li');
-      var name = document.createElement('span');
-      name.textContent = r.label;
-      var state = document.createElement('span');
-      state.className = r.ok ? 'ok' : 'bad';
-      state.textContent = r.ok ? 'OK' : r.detail;
-      li.append(name, state);
-      out.append(li);
-    });
-  }
-
-  function fail(text) {
-    show([{ label: 'erro', ok: false, detail: text }]);
-  }
-
-  // error.type "UNAUTHORIZED": init data ausente ou inválido (Mini Apps > Serverless).
-  function describe(error) {
-    if (error.type === 'UNAUTHORIZED') return 'Abra este app pelo bot, dentro do Telegram.';
-    return error.message || 'erro desconhecido';
-  }
-
-  // Mini Apps > Serverless: call(name[, input][, callback]); callback(error, resultado).
-  function run(name) {
-    busy(true);
-    tg.Serverless.call(name, function (error, rows) {
-      busy(false);
-      if (error) return fail(describe(error));
-      show(rows);
-    });
-  }
-
-  if (!tg || !tg.Serverless) {
-    // Fora do Telegram, ou em um cliente antigo que ainda não tem o objeto Serverless.
-    busy(true);
-    fail(tg ? 'Atualize o Telegram para usar este app.' : 'Abra este app dentro do Telegram.');
-  } else {
+  <script>
+    var tg = Telegram.WebApp;
     tg.ready();
-    tg.expand();
-    document.getElementById('verify').addEventListener('click', function () {
-      run('verify');
-    });
-    document.getElementById('unverify').addEventListener('click', function () {
-      tg.showConfirm('Remover as verificações?', function (ok) {
-        if (ok) run('unverify');
+
+    var out = document.getElementById('out');
+    var buttons = [document.getElementById('verify'), document.getElementById('unverify')];
+
+    function show(text, isError) {
+      var li = document.createElement('li');
+      li.textContent = text;
+      if (isError) li.className = 'error';
+      out.appendChild(li);
+    }
+
+    // Serverless.call(name, callback): error é null em caso de sucesso; senão traz
+    // message, type ('ENDPOINT_ERROR' quando o endpoint lançou EndpointError), status e parameters.
+    function call(name) {
+      out.textContent = '';
+      buttons.forEach(function (b) { b.disabled = true; });
+      tg.Serverless.call(name, function (error, results) {
+        buttons.forEach(function (b) { b.disabled = false; });
+        if (error) {
+          var problem = error.parameters && error.parameters.problem;
+          show(error.message + (problem ? ': ' + problem : ''), true);
+          return;
+        }
+        results.forEach(function (r) {
+          show(r.ok ? 'OK | ' + r.label : 'FALHOU | ' + r.label + ': ' + r.detail, !r.ok);
+        });
       });
-    });
-  }
-</script>
+    }
+
+    buttons[0].addEventListener('click', function () { call('verify'); });
+    buttons[1].addEventListener('click', function () { call('unverify'); });
+  </script>
 </body>
 </html>

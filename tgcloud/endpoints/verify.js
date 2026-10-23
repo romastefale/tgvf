@@ -1,6 +1,5 @@
-// Endpoint chamado pelo Mini App: Telegram.WebApp.Serverless.call('verify', ...)
-//  - assinatura (input, ctx) e ctx.initData já validado pela plataforma: Serverless > Endpoints
-import { assertOwner, verifyAll } from '../lib/verifier.js';
+// POST /api/verify, chamado por Telegram.WebApp.Serverless.call('verify', cb).
+import { assertOwner, verifyAll } from '../lib/verification.js';
 
 export default async function (input, ctx) {
   assertOwner(ctx);
