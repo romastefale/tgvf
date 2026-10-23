@@ -2,14 +2,37 @@
 // Bot API: verifyUser, verifyChat, removeUserVerification, removeChatVerification.
 // SDK: `api.<método>(params)` devolve o resultado já sem o envelope e lança BotApiError
 // (.code, .description, .parameters) quando a Bot API responde { ok: false }.
-import { api, BotApiError, EndpointError } from 'sdk';
-import { OWNER_ID, MY_BOTS } from './config.js';
+import { api, db, BotApiError, EndpointError } from 'sdk';
+import { eq } from 'sdk/db';
+import { bots } from '../schema.js';
+import { OWNER_ID } from './config.js';
 
-// Motivo de a configuração estar incompleta, ou null se está tudo preenchido.
+export const USERNAME = /^@\w{5,32}$/;
+
+export async function listBots() {
+  const rows = await db.select().from(bots).all();
+  return rows.map((r) => r.username);
+}
+
+// Devolve false se o bot já estava na lista.
+export async function addBot(username) {
+  const found = await db.select().from(bots).where(eq(bots.username, username)).get();
+  if (found) return false;
+  await db.insert(bots).values({ username }).run();
+  return true;
+}
+
+// Devolve false se o bot não estava na lista.
+export async function removeBot(username) {
+  const found = await db.select().from(bots).where(eq(bots.username, username)).get();
+  if (!found) return false;
+  await db.delete(bots).where(eq(bots.username, username)).run();
+  return true;
+}
+
+// Motivo de o OWNER_ID não estar preenchido, ou null.
 export function configProblem() {
   if (!Number.isInteger(OWNER_ID) || OWNER_ID <= 0) return 'OWNER_ID não preenchido';
-  if (!Array.isArray(MY_BOTS) || MY_BOTS.length === 0) return 'MY_BOTS vazio';
-  if (!MY_BOTS.every((b) => typeof b === 'string' && /^@\S+$/.test(b))) return 'MY_BOTS deve conter @usernames';
   return null;
 }
 
@@ -37,11 +60,9 @@ async function attempt(label, call) {
   }
 }
 
-const bots = () => [...new Set(MY_BOTS)];
-
 export async function verifyAll() {
   const results = [await attempt('perfil', () => api.verifyUser({ user_id: OWNER_ID }))];
-  for (const username of bots()) {
+  for (const username of await listBots()) {
     results.push(await attempt(username, () => api.verifyChat({ chat_id: username })));
   }
   return results;
@@ -49,7 +70,7 @@ export async function verifyAll() {
 
 export async function removeAll() {
   const results = [await attempt('perfil', () => api.removeUserVerification({ user_id: OWNER_ID }))];
-  for (const username of bots()) {
+  for (const username of await listBots()) {
     results.push(await attempt(username, () => api.removeChatVerification({ chat_id: username })));
   }
   return results;
