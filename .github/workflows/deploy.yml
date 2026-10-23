@@ -38,13 +38,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: Verificar secret
-        run: |
-          if [ -z "$TGCLOUD_TOKEN" ]; then
-            echo "::error::Defina o secret KEY1 (Settings → Secrets and variables → Actions)."
-            exit 1
-          fi
-
       # CLI oficial @tgcloud/cli em versão fixa, instalada localmente.
       - run: npm install --no-audit --no-fund
 
@@ -60,18 +53,8 @@ jobs:
       - name: Mudanças a publicar
         run: npm run status
 
-      # Documentação do CLI: `push` envia só o que mudou, em lote atômico, e depois atualiza o registro
-      # local; `fetch` atualiza esse registro com o estado real da nuvem. Se o `push` terminar com
-      # erro, `fetch` + `push` de novo reconcilia (não envia nada se a nuvem já está igual). Se o
-      # segundo `push` também falhar, o deploy falha.
       - name: Publicar módulos e Mini App
-        run: |
-          if ! npm run deploy; then
-            echo "::warning::push terminou com erro; sincronizando o estado (fetch) e repetindo o push"
-            npm run fetch
-            npm run status
-            npm run deploy
-          fi
+        run: npm run deploy
 
       # `migrate` sem flag exige terminal interativo e falha em CI. Com --safe aplica só mudanças
       # aditivas (tabela, coluna ou índice novos) e ignora as destrutivas; --yes não é usado.

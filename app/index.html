@@ -214,8 +214,7 @@ body{min-height:var(--vh);padding-top:max(8px,env(safe-area-inset-top));padding-
     tg.Serverless.call(name, function (error, results) {
       buttons.forEach(function (b) { b.disabled = false; });
       if (error) {
-        var problem = error.parameters && error.parameters.problem;
-        show('aviso', error.message, problem);
+        show('aviso', error.message);
         return;
       }
       results.forEach(function (r) {
