@@ -73,5 +73,10 @@ jobs:
             npm run deploy
           fi
 
+      # `migrate` sem flag exige terminal interativo e falha em CI. Com --safe aplica só mudanças
+      # aditivas (tabela, coluna ou índice novos) e ignora as destrutivas; --yes não é usado.
+      - name: Migrar banco
+        run: npm run migrate -- --safe
+
       - name: Estado do webhook
         run: npm run webhook

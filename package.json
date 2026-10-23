@@ -11,6 +11,7 @@
     "deploy": "tgcloud push",
     "status": "tgcloud status",
     "fetch": "tgcloud fetch",
+    "migrate": "tgcloud migrate",
     "run": "tgcloud run",
     "webhook": "tgcloud webhook"
   }
